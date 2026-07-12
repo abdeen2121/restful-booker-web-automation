@@ -28,7 +28,7 @@ import java.util.List;
  *  2. If neither appears within the timeout, we fall through gracefully.
  *     The subsequent writeText calls will themselves timeout with clear messages.
  */
-public class BمسookingPage extends BasePage {
+public class Bمسgh --versionookingPage extends BasePage {
 
     // ─── Locators ────────────────────────────────────────────────────────────
 
