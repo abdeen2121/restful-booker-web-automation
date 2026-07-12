@@ -1,0 +1,21 @@
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite name="Restful Booker Automation Suite" verbose="1" parallel="false">
+
+    <listeners>
+        <listener class-name="io.qameta.allure.testng.AllureTestNg"/>
+        <listener class-name="com.restfulbooker.listeners.AllureScreenshotListener"/>
+    </listeners>
+
+    <test name="Positive Tests">
+        <classes>
+            <class name="com.restfulbooker.tests.PositiveTests"/>
+        </classes>
+    </test>
+
+    <test name="Negative Tests">
+        <classes>
+            <class name="com.restfulbooker.tests.NegativeTests"/>
+        </classes>
+    </test>
+
+</suite>

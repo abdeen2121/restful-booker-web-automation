@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+ http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.restfulbooker</groupId>
+    <artifactId>restful-booker-framework</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+
+    <name>Restful Booker Web Automation Framework</name>
+    <description>Selenium + TestNG + Allure POM Framework for automationintesting.online</description>
+
+    <properties>
+        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>11</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <!--
+        ╔══════════════════════════════════════════════════════════════════════╗
+        ║ DEPENDENCY VERSIONS — upgraded to latest stable as of June 2026 ║
+        ║ ║
+        ║ Key compatibility rules enforced here: ║
+        ║ • allure-testng and allure-java-commons MUST share the same version ║
+        ║ to avoid NoSuchMethodError between allure-model sub-artifacts. ║
+        ║ • aspectjweaver version must be >= the version allure-testng ║
+        ║ embeds transitively (allure-testng 2.29 requires aspectj 1.9.x). ║
+        ║ • webdrivermanager 6.x requires selenium 4.x (provided scope) — ║
+        ║ no conflict because we declare selenium-java ourselves. ║
+        ║ • maven-surefire-plugin 3.5.x fully supports TestNG 7.11. ║
+        ╚══════════════════════════════════════════════════════════════════════╝
+        -->
+
+        <!-- ── Core test dependencies ────────────────────────────── -->
+        <!-- 4.27.0: last 4.x minor before selenium started the v5 API churn; -->
+        <!-- stable, widely-tested with ChromeDriver 130+. -->
+        <selenium.version>4.27.0</selenium.version>
+
+        <!-- 7.11.0: latest stable; fixes several listener-ordering bugs vs 7.9 -->
+        <testng.version>7.11.0</testng.version>
+
+        <!-- 6.3.4: major rewrite of 6.x adds auto-discovery of installed -->
+        <!-- Chrome/Edge without hitting GitHub API — critical for CI stability. -->
+        <!-- setup() still works as before; no code changes needed. -->
+        <webdrivermanager.version>6.3.4</webdrivermanager.version>
+
+        <!-- ── Allure reporting stack ────────────────────────────── -->
+        <!-- 2.29.0: last production-stable release before the 2.30+ alpha-chain -->
+        <!-- allure-testng AND allure-java-commons must be identical to prevent -->
+        <!-- NoSuchMethodError from split allure-model versions. -->
+        <allure.version>2.29.0</allure.version>
+
+        <!-- ── AspectJ (Allure @Step AOP weaving) ────────────────── -->
+        <!-- 1.9.25.1: latest stable (Dec 2025); fixes several LTW memory leaks -->
+        <!-- over 1.9.21. Must be used for BOTH the dependency and -javaagent. -->
+        <aspectj.version>1.9.25.1</aspectj.version>
+
+        <!-- ── Maven plugins ─────────────────────────────────────── -->
+        <!-- 3.5.6: current stable; full TestNG 7.11 support + JVM arg fixes. -->
+        <surefire.version>3.5.6</surefire.version>
+
+        <!-- 3.14.0: latest stable compiler plugin. -->
+        <maven.compiler.plugin.version>3.14.0</maven.compiler.plugin.version>
+
+        <!-- 2.14.0: latest allure-maven report generator plugin. -->
+        <allure.maven.version>2.14.0</allure.maven.version>
+
+        <!-- 2.0.17: matches what webdrivermanager 6.3.4 uses internally. -->
+        <slf4j.version>2.0.17</slf4j.version>
+    </properties>
+
+    <dependencies>
+
+        <!-- ── Selenium WebDriver 4 ─────────────────────────────────────── -->
+        <dependency>
+            <groupId>org.seleniumhq.selenium</groupId>
+            <artifactId>selenium-java</artifactId>
+            <version>${selenium.version}</version>
+        </dependency>
+
+        <!-- ── WebDriverManager ─────────────────────────────────────────── -->
+        <!--
+        v6 auto-detects the locally installed browser version via OS APIs,
+        removing the GitHub API rate-limit risk that plagued v5 in CI.
+        Usage (DriverManager.java) is unchanged: WebDriverManager.chromedriver().setup()
+        -->
+        <dependency>
+            <groupId>io.github.bonigarcia</groupId>
+            <artifactId>webdrivermanager</artifactId>
+            <version>${webdrivermanager.version}</version>
+        </dependency>
+        <!-- ── TestNG ───────────────────────────────────────────────────── -->
+        <dependency>
+            <groupId>org.testng</groupId>
+            <artifactId>testng</artifactId>
+            <version>${testng.version}</version>
+            <!-- <scope>test</scope>-->
+        </dependency>
+
+        <!-- ── Allure TestNG Integration ────────────────────────────────── -->
+        <!--
+        Pulls in allure-model and allure-java-commons transitively,
+        but we pin allure-java-commons explicitly below to guarantee
+        the SAME version and avoid split-package NoSuchMethodErrors.
+        -->
+        <dependency>
+            <groupId>io.qameta.allure</groupId>
+            <artifactId>allure-testng</artifactId>
+            <version>${allure.version}</version>
+        </dependency>
+
+        <!-- ── Allure Java Commons (@Step, @Attachment, @Description …) ── -->
+        <!--
+        MUST match allure-testng version exactly.
+        Pinning this explicitly prevents Maven from resolving a different
+        version from the transitive dependency graph.
+        -->
+        <dependency>
+            <groupId>io.qameta.allure</groupId>
+            <artifactId>allure-java-commons</artifactId>
+            <version>${allure.version}</version>
+        </dependency>
+
+        <!-- ── AspectJ Weaver ────────────────────────────────────────────── -->
+        <!--
+        Required for Allure @Step AOP weaving at load time.
+        The JAR is also referenced as a -javaagent in the Surefire config.
+        Scope: compile (not runtime) so the JAR resolves to local repo path
+        reliably when Surefire expands ${settings.localRepository}.
+        -->
+        <dependency>
+            <groupId>org.aspectj</groupId>
+            <artifactId>aspectjweaver</artifactId>
+            <version>${aspectj.version}</version>
+        </dependency>
+
+        <!-- ── SLF4J Simple Logger ───────────────────────────────────────── -->
+        <!-- Aligned with slf4j version used internally by webdrivermanager 6 -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>${slf4j.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- <dependency>-->
+        <!-- <groupId>org.testng</groupId>-->
+        <!-- <artifactId>testng</artifactId>-->
+        <!-- <version>7.11.0</version>-->
+        <!-- <scope>compile</scope>-->
+        <!-- </dependency>-->
+
+    </dependencies>
+
+    <build>
+        <plugins>
+
+            <!-- ── Maven Compiler Plugin ─────────────────────────────────── -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${maven.compiler.plugin.version}</version>
+                <configuration>
+                    <source>11</source>
+                    <target>11</target>
+                    <encoding>UTF-8</encoding>
+                </configuration>
+            </plugin>
+
+            <!-- ── Maven Surefire Plugin ─────────────────────────────────── -->
+            <!--
+            3.5.6 fixes a TestNG listener registration race condition that
+            existed in 3.2.5 and could cause Allure screenshots to be
+            attached to the wrong test result in parallel suites.
+
+            The -javaagent arg MUST use ${aspectj.version} so it
+            self-heals whenever the version property is updated.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${surefire.version}</version>
+                <configuration>
+                    <suiteXmlFiles>
+                        <suiteXmlFile>src/test/resources/testng.xml</suiteXmlFile>
+                    </suiteXmlFiles>
+                    <!--
+                    AspectJ load-time weaving agent — required for Allure @Step
+                    annotations to appear as steps in the report.
+                    The path is resolved from the local Maven repository.
+                    -->
+                    <argLine>
+                        -javaagent:"${settings.localRepository}/org/aspectj/aspectjweaver/${aspectj.version}/aspectjweaver-${aspectj.version}.jar"
+                    </argLine>
+                    <systemPropertyVariables>
+                        <allure.results.directory>
+                            ${project.build.directory}/allure-results
+                        </allure.results.directory>
+                    </systemPropertyVariables>
+                    <!-- Ensure test output is not buffered so failures print immediately -->
+                    <useFile>false</useFile>
+                </configuration>
+            </plugin>
+
+            <!-- ── Allure Maven Plugin ───────────────────────────────────── -->
+            <!-- Run: mvn allure:serve → builds and opens the HTML report -->
+            <!-- Run: mvn allure:report → generates report into target/site -->
+            <plugin>
+                <groupId>io.qameta.allure</groupId>
+                <artifactId>allure-maven</artifactId>
+                <version>${allure.maven.version}</version>
+                <configuration>
+                    <reportVersion>${allure.version}</reportVersion>
+                    <resultsDirectory>${project.build.directory}/allure-results</resultsDirectory>
+                </configuration>
+            </plugin>
+
+        </plugins>
+    </build>
+
+</project>
