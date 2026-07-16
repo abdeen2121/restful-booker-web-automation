@@ -36,7 +36,7 @@ public class PositiveTests extends BaseTest {
         dashboardPage = new AdminDashboardPage(driver);
     }
 
-    // ===================== CONTACT =====================
+    
 
     @Test(description = "P01 - Successful contact form submission")
     @Description("Fill contact form with valid data and verify success message appears.")
